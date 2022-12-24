@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utils.cuh"
 
 WindowGuard::WindowGuard(GLFWwindow *&window, const int width, const int height,
                          const std::string &title)

@@ -4,7 +4,7 @@
 #include "defines.h"
 
 class MandelbrotSet {
-    
+public:
 };
 
 #endif

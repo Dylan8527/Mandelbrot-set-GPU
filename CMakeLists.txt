@@ -48,7 +48,7 @@ list(APPEND GUI_SOURCES
   libs/imgui/imgui_widgets.cpp
 )
 # set source files and add executable
-file(GLOB SRC_FILES src/*.cpp)
+file(GLOB SRC_FILES src/*.cpp src/*.cu)
 set(CMAKE_BUILD_TYPE "Release")
 add_executable(main ${SRC_FILES} ${INTERNAL_SRC_FILES} ${GUI_SOURCES})
 target_include_directories(main PRIVATE include)

@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cstdlib>
-#include "utils.h"
+#include "utils.cuh"
 #include "MandelbrotSet.h"
 #include <omp.h>
 // ImGUI 
