@@ -26,6 +26,7 @@ using glm::vec3;
 using glm::vec4;
 
 #define PI glm::pi<float>()
+#define uint8 unsigned char
 
 #define LOG_INFO(msg)                             \
   std::cerr << "[INFO] "                          \
