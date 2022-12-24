@@ -34,11 +34,23 @@ include_directories(
   libs/glm
   libs/glew/include
   libs/glfw/include
+  libs/imgui    # imgui
+  libs/imguizmo # imguizmo
+)
+list(APPEND GUI_SOURCES
+  libs/imguizmo/ImGuizmo.cpp
+  libs/imgui/imgui.cpp
+  libs/imgui/backends/imgui_impl_glfw.cpp
+  libs/imgui/backends/imgui_impl_opengl3.cpp
+  libs/imgui/imgui_draw.cpp
+  libs/imgui/imgui_demo.cpp
+  libs/imgui/imgui_tables.cpp
+  libs/imgui/imgui_widgets.cpp
 )
 # set source files and add executable
 file(GLOB SRC_FILES src/*.cpp)
 set(CMAKE_BUILD_TYPE "Release")
-add_executable(main ${SRC_FILES} ${INTERNAL_SRC_FILES})
+add_executable(main ${SRC_FILES} ${INTERNAL_SRC_FILES} ${GUI_SOURCES})
 target_include_directories(main PRIVATE include)
 target_compile_features(main PRIVATE cxx_std_17)
 target_compile_definitions(main PRIVATE ${DEFINES})
