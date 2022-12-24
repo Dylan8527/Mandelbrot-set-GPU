@@ -25,4 +25,6 @@ mkdir build
 cd build
 cmake ..
 cmake --build . --config Release -j
+cd Release
+./main.exe
 ```
