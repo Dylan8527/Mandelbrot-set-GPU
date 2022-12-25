@@ -31,12 +31,16 @@ namespace MandelbrotSetGUI {
     bool show_another_window = false; // Show another window
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f); // Background color
 
+    MandelbrotSet set(WIDTH,HEIGHT);
     //-------------------------opengl drawing-------------------------------------
     void RenderOpenGL()
     {
-        auto data = GenerateRandomData(WIDTH * HEIGHT * 3);
+        /*auto data = GenerateRandomData(WIDTH * HEIGHT * 3);
         DrawContents(data);
-        delete[] data;
+        delete[] data;*/
+        set.compute();
+        DrawContents(set.get_data());
+        std::cout<<(int)set.get_data()[29]<<std::endl;
     }
     
     //-------------------------imgui creation-------------------------------------
@@ -118,7 +122,7 @@ int main(int argc, char *argv[])
         glfwPollEvents();
 
         MandelbrotSetGUI::RenderOpenGL();
-        MandelbrotSetGUI::RenderMainImGui();
+        //MandelbrotSetGUI::RenderMainImGui();
 
         // Close the window
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)

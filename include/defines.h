@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
+#include <complex>
 
 using glm::cross;
 using glm::dot;
@@ -24,6 +25,8 @@ using glm::transpose;
 using glm::vec2;
 using glm::vec3;
 using glm::vec4;
+
+using glm::ivec2;
 
 #define PI glm::pi<float>()
 #define uint8 unsigned char
