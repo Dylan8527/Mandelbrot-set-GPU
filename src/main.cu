@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include "utils.cuh"
-#include "MandelbrotSet.h"
+#include "MandelbrotSet.cuh"
 #include <omp.h>
 // ImGUI 
 #  include <imgui.h>
@@ -32,15 +32,27 @@ namespace MandelbrotSetGUI {
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f); // Background color
 
     MandelbrotSet set(WIDTH,HEIGHT);
+
+    float center_x,center_y;
+    center_x=0;
+    center_y=0;
+    float x_start = -2.0;
+	float x_fin = 1.0;
+	float y_start = -1.0;
+	float y_fin = 1.0;
+    float scale=0.99;
     //-------------------------opengl drawing-------------------------------------
     void RenderOpenGL()
     {
         /*auto data = GenerateRandomData(WIDTH * HEIGHT * 3);
         DrawContents(data);
         delete[] data;*/
-        set.compute();
+        set.compute(x_start,x_fin,y_start,y_fin);
+        x_start*=scale;
+        x_fin*=scale;
+        y_start*=scale;
+        y_fin*=scale;
         DrawContents(set.get_data());
-        std::cout<<(int)set.get_data()[29]<<std::endl;
     }
     
     //-------------------------imgui creation-------------------------------------
@@ -122,7 +134,7 @@ int main(int argc, char *argv[])
         glfwPollEvents();
 
         MandelbrotSetGUI::RenderOpenGL();
-        //MandelbrotSetGUI::RenderMainImGui();
+        MandelbrotSetGUI::RenderMainImGui();
 
         // Close the window
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)

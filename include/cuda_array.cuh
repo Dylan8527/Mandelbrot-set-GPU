@@ -1,7 +1,7 @@
 #ifndef __CUDA_ARRAY_CUH__
 #define __CUDA_ARRAY_CUH__
-#include <cuda_runtime.h>
 #include "utils.cuh"
+#include "cuda_runtime.h"
 
 /**
  * @brief
