@@ -3,11 +3,11 @@
 #include "utils.cuh"
 #include "MandelbrotSet.cuh"
 #include <omp.h>
-// ImGUI 
-#  include <imgui.h>
-#  include <backends/imgui_impl_glfw.h>
-#  include <backends/imgui_impl_opengl3.h>
-#  include <ImGuizmo.h>
+// ImGUI
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <ImGuizmo.h>
 
 // void processInput(GLFWwindow *window);
 // void mouse_callback(GLFWwindow *window, double x, double y);
@@ -23,42 +23,48 @@ float lastY = HEIGHT / 2.f;
 
 GLFWwindow *window;
 
-void DrawContents(uint8_t* data);
-uint8_t* GenerateRandomData(uint32_t size);
+void DrawContents(uint8_t *data);
+uint8_t *GenerateRandomData(uint32_t size);
 
-namespace MandelbrotSetGUI {
-    bool show_demo_window = true; // Show demo window
-    bool show_another_window = false; // Show another window
+namespace MandelbrotSetGUI
+{
+    bool show_demo_window = true;                            // Show demo window
+    bool show_another_window = false;                        // Show another window
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f); // Background color
 
-    MandelbrotSet set(WIDTH,HEIGHT);
+    MandelbrotSet set(WIDTH, HEIGHT);
 
-    float center_x,center_y;
-    center_x=0;
-    center_y=0;
+    float center_x = -0.748766710846959;//-1.6735 //-1.7497591451303665
+    float center_y = 0.123640847970064;//0.0003318 //-0.0000000036851380
     float x_start = -2.0;
-	float x_fin = 1.0;
-	float y_start = -1.0;
-	float y_fin = 1.0;
-    float scale=0.99;
+    float x_fin = 1.0;
+    float y_start = -1.0;
+    float y_fin = 1.0;
+    float scale = 0.9;
+
+    void update_scale()
+    {
+        x_start = (x_start-center_x)*scale+center_x;
+        x_fin =(x_fin-center_x)*scale+center_x;
+        y_start =(y_start-center_y)* scale+center_y;
+        y_fin =(y_fin-center_y)* scale+center_y;
+    }
     //-------------------------opengl drawing-------------------------------------
     void RenderOpenGL()
     {
         /*auto data = GenerateRandomData(WIDTH * HEIGHT * 3);
         DrawContents(data);
         delete[] data;*/
-        set.compute(x_start,x_fin,y_start,y_fin);
-        x_start*=scale;
-        x_fin*=scale;
-        y_start*=scale;
-        y_fin*=scale;
+        set.compute(x_start, x_fin, y_start, y_fin);
+
+        update_scale();
         DrawContents(set.get_data());
     }
-    
+
     //-------------------------imgui creation-------------------------------------
     void RenderMainImGui()
     {
-        
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -74,11 +80,11 @@ namespace MandelbrotSetGUI {
 
             ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Text("This is some useful text."); // Display some text (you can use a format strings too)
+            ImGui::Text("This is some useful text.");          // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window); // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);             // Edit 1 float using a slider from 0.0f to 1.0f
             ImGui::ColorEdit3("clear color", (float *)&clear_color); // Edit 3 floats representing a color
 
             if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -91,7 +97,7 @@ namespace MandelbrotSetGUI {
         }
 
         // 3. Show another simple window.
-        if(show_another_window)
+        if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
             ImGui::Text("Hello from another window!");
@@ -120,15 +126,16 @@ int main(int argc, char *argv[])
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext(); // Setup Dear ImGui context
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    ImGuiIO &io = ImGui::GetIO();
+    (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
 
     ImGui::StyleColorsDark(); // Setup Dear ImGui style
-    const char* glsl_version = "#version 130";
+    const char *glsl_version = "#version 130";
     ImGui_ImplGlfw_InitForOpenGL(window, true); // Setup Platform/Renderer bindings
     ImGui_ImplOpenGL3_Init(glsl_version);
-    
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -139,12 +146,12 @@ int main(int argc, char *argv[])
         // Close the window
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
-        
+
         glfwSwapBuffers(window);
         // glfwPollEvents();
     }
 
-    //Cleanup
+    // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -155,13 +162,15 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void DrawContents(uint8_t* data) {
+void DrawContents(uint8_t *data)
+{
     glDrawPixels(WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, data);
 }
 
-uint8_t* GenerateRandomData(uint32_t size) {
-    uint8_t* data = new uint8_t[size];
-    #pragma omp parallel for
+uint8_t *GenerateRandomData(uint32_t size)
+{
+    uint8_t *data = new uint8_t[size];
+#pragma omp parallel for
     for (int i = 0; i < size; i++)
         data[i] = static_cast<uint8_t>(rand());
     return data;
