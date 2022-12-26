@@ -40,7 +40,7 @@ namespace MandelbrotSetGUI
     float x_fin = 1.0;
     float y_start = -1.0;
     float y_fin = 1.0;
-    float scale = 0.9;
+    float scale = 0.95;
 
     void update_scale()
     {
