@@ -14,12 +14,12 @@ public:
     //MandelbrotSet()=default;
     MandelbrotSet(int width,int height);
     ~MandelbrotSet();
-    int calpixel(std::complex<float> c);
-    void compute(float x_start,float x_finish,float y_start,float y_finish);
+    int calpixel(std::complex<double> c);
+    void compute(double x_start,double x_finish,double y_start,double y_finish);
     uint8_t* get_data(){
         return data_host.data();
     }
-    std::vector<vec3> colormap(vec3 theta=vec3(.0f, .15f, .25f),int color_size=1<<12);
+    std::vector<vec3> colormap(vec3 theta=vec3(.1f, .15f, .25f),int color_size=1<<8);
 
 private:
     thrust::host_vector<uint8_t> data_host;

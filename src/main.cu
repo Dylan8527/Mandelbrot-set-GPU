@@ -34,13 +34,13 @@ namespace MandelbrotSetGUI
 
     MandelbrotSet set(WIDTH, HEIGHT);
 
-    float center_x = -0.748766710846959;//-1.6735 //-1.7497591451303665
-    float center_y = 0.123640847970064;//0.0003318 //-0.0000000036851380
-    float x_start = -2.0;
-    float x_fin = 1.0;
-    float y_start = -1.0;
-    float y_fin = 1.0;
-    float scale = 0.95;
+    double center_x = -0.748766710846959;//-0.10109636384562;//-0.77568377; //-0.748766710846959//-1.6735 //-1.7497591451303665
+    double center_y =0.123640847970064;//0.95628651080914;//0.13646737; //0.123640847970064//0.0003318 //-0.0000000036851380
+    double x_start = -2.0;
+    double x_fin = 1.0;
+    double y_start = -1.0;
+    double y_fin = 1.0;
+    double scale = 0.95;
 
     void update_scale()
     {
