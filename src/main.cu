@@ -13,8 +13,8 @@
 // void mouse_callback(GLFWwindow *window, double x, double y);
 // void scroll_callback(GLFWwindow *window, double x, double y);
 
-const int WIDTH = 1280;
-const int HEIGHT = 720;
+const int WIDTH = 800;
+const int HEIGHT = 600;
 
 bool firstMouse = true;
 float fov = 45.f;
@@ -34,21 +34,79 @@ namespace MandelbrotSetGUI
 
     MandelbrotSet set(WIDTH, HEIGHT);
 
-    float center_x = -0.748766710846959;//-1.6735 //-1.7497591451303665
-    float center_y = 0.123640847970064;//0.0003318 //-0.0000000036851380
-    float x_start = -2.0;
-    float x_fin = 1.0;
-    float y_start = -1.0;
-    float y_fin = 1.0;
-    float scale = 0.9;
+    double center_x = -0.748766710846959;//-0.10109636384562;//-0.77568377; //-0.748766710846959//-1.6735 //-1.7497591451303665
+    double center_y =0.123640847970064;//0.95628651080914;//0.13646737; //0.123640847970064//0.0003318 //-0.0000000036851380
+    double x_start = -2.0;
+    double x_fin = 1.0;
+    double y_start = -1.0;
+    double y_fin = 1.0;
+    double scale = 1.0;
 
     void update_scale()
     {
-        x_start = (x_start-center_x)*scale+center_x;
-        x_fin =(x_fin-center_x)*scale+center_x;
-        y_start =(y_start-center_y)* scale+center_y;
-        y_fin =(y_fin-center_y)* scale+center_y;
+        // x_start = (x_start-center_x)*scale+center_x;
+        // x_fin =(x_fin-center_x)*scale+center_x;
+        // y_start =(y_start-center_y)* scale+center_y;
+        // y_fin =(y_fin-center_y)* scale+center_y;
+        x_start = center_x - 1.0 * scale;
+        x_fin = center_x + 1.0 * scale;
+        y_start = center_y - 1.0 * scale;
+        y_fin = center_y + 1.0 * scale;
     }
+
+    void processInput(GLFWwindow *window)
+    {
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        {
+            center_y += 0.01*scale;
+        }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        {
+            center_y -= 0.01*scale;
+        }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        {
+            center_x -= 0.01*scale;
+        }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        {
+            center_x += 0.01*scale;
+        }
+    }
+
+    void mouse_callback(GLFWwindow *window, double x, double y)
+    {
+        if (firstMouse)
+        {
+            lastX = x;
+            lastY = y;
+            firstMouse = false;
+        }
+
+        float xoffset = x - lastX;
+        float yoffset = lastY - y; // reversed since y-coordinates go from bottom to top
+
+        lastX = x;
+        lastY = y;
+
+        center_x += xoffset * 0.001 * scale;
+        center_y += yoffset * 0.001 * scale;
+    }
+
+    void scroll_callback(GLFWwindow* window, double x, double y)
+    {
+        if (y > 0)
+        {
+            scale *= 0.9;
+        }
+        else
+        {
+            scale *= 1.1;
+        }
+    }
+
     //-------------------------opengl drawing-------------------------------------
     void RenderOpenGL()
     {
@@ -56,8 +114,7 @@ namespace MandelbrotSetGUI
         DrawContents(data);
         delete[] data;*/
         set.compute(x_start, x_fin, y_start, y_fin);
-
-        update_scale();
+        // update_scale();
         DrawContents(set.get_data());
     }
 
@@ -120,8 +177,8 @@ namespace MandelbrotSetGUI
 int main(int argc, char *argv[])
 {
     WindowGuard windowGuard(window, WIDTH, HEIGHT, "Mandelbrot set explorer on GPU");
-    // glfwSetScrollCallback(window, scroll_callback);
-    // glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, MandelbrotSetGUI::scroll_callback);
+    glfwSetCursorPosCallback(window, MandelbrotSetGUI::mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     IMGUI_CHECKVERSION();
@@ -138,6 +195,7 @@ int main(int argc, char *argv[])
 
     while (!glfwWindowShouldClose(window))
     {
+        MandelbrotSetGUI::processInput(window);
         glfwPollEvents();
 
         MandelbrotSetGUI::RenderOpenGL();
@@ -166,7 +224,7 @@ void DrawContents(uint8_t *data)
 {
     glDrawPixels(WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, data);
 }
-
+W
 uint8_t *GenerateRandomData(uint32_t size)
 {
     uint8_t *data = new uint8_t[size];
