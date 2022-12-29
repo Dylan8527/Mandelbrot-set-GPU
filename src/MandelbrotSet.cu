@@ -32,6 +32,11 @@ std::vector<vec3> MandelbrotSet::colormap(vec3 theta, int color_size)
     return colors;
 }
 
+void MandelbrotSet::update_colormap(vec3 theta) {
+    colortable_host = colormap(theta);
+    colortable_device = colortable_host;
+}
+
 int MandelbrotSet::calpixel(std::complex<double> c)
 {
     int count = 0;
@@ -100,9 +105,9 @@ __global__ void computeKernel(uint8_t *data, int width, int height, double x_sta
 
         int color_index = count == max ? max : count + 1 - log(log2(cuCabs(z)));
         vec3 color = colortable_device[color_index];
-        data[offset + 0] = uint8_t(color.x * 255);
-        data[offset + 1] = uint8_t(color.y * 255);
-        data[offset + 2] = uint8_t(color.z * 255);
+        data[offset + 0] = uint8_t(color.x*255);
+        data[offset + 1] = uint8_t(color.y*255);
+        data[offset + 2] = uint8_t(color.z*255);
         /*data[offset + 0] = color_index;
         data[offset + 1] = color_index;
         data[offset + 2] = color_index;*/

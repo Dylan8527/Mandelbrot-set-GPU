@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <chrono>
 #include "utils.cuh"
 #include "MandelbrotSet.cuh"
 #include <omp.h>
@@ -28,7 +29,7 @@ uint8_t *GenerateRandomData(uint32_t size);
 
 namespace MandelbrotSetGUI
 {
-    bool show_demo_window = true;                            // Show demo window
+    bool show_demo_window = false;                            // Show demo window
     bool show_another_window = false;                        // Show another window
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f); // Background color
 
@@ -41,17 +42,25 @@ namespace MandelbrotSetGUI
     double y_start = -1.0;
     double y_fin = 1.0;
     double scale = 1.0;
+    const double ratio = WIDTH / HEIGHT;
+    // timer for set.compute(x_start, x_fin, y_start, y_fin);
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+    std::chrono::duration<double> elapsed_seconds;
 
     void update_scale()
     {
-        // x_start = (x_start-center_x)*scale+center_x;
-        // x_fin =(x_fin-center_x)*scale+center_x;
-        // y_start =(y_start-center_y)* scale+center_y;
-        // y_fin =(y_fin-center_y)* scale+center_y;
-        x_start = center_x - 1.0 * scale;
-        x_fin = center_x + 1.0 * scale;
-        y_start = center_y - 1.0 * scale;
-        y_fin = center_y + 1.0 * scale;
+        x_start = (x_start-center_x)*scale+center_x;
+        x_fin =(x_fin-center_x)*scale+center_x;
+        y_start =(y_start-center_y)* scale+center_y;
+        y_fin =(y_fin-center_y)* scale+center_y;
+    }
+
+    void update()
+    {
+        x_start = center_x - 0.5 * ratio * scale;
+        x_fin = center_x + 0.5 * ratio * scale;
+        y_start = center_y -  0.5 * scale;
+        y_fin = center_y +  0.5 * scale;
     }
 
     void processInput(GLFWwindow *window)
@@ -113,8 +122,11 @@ namespace MandelbrotSetGUI
         /*auto data = GenerateRandomData(WIDTH * HEIGHT * 3);
         DrawContents(data);
         delete[] data;*/
+        start = std::chrono::system_clock::now();
         set.compute(x_start, x_fin, y_start, y_fin);
+        end = std::chrono::system_clock::now();
         // update_scale();
+        update();
         DrawContents(set.get_data());
     }
 
@@ -178,7 +190,7 @@ int main(int argc, char *argv[])
 {
     WindowGuard windowGuard(window, WIDTH, HEIGHT, "Mandelbrot set explorer on GPU");
     glfwSetScrollCallback(window, MandelbrotSetGUI::scroll_callback);
-    glfwSetCursorPosCallback(window, MandelbrotSetGUI::mouse_callback);
+    // glfwSetCursorPosCallback(window, MandelbrotSetGUI::mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     IMGUI_CHECKVERSION();
@@ -196,17 +208,12 @@ int main(int argc, char *argv[])
     while (!glfwWindowShouldClose(window))
     {
         MandelbrotSetGUI::processInput(window);
-        glfwPollEvents();
 
         MandelbrotSetGUI::RenderOpenGL();
         MandelbrotSetGUI::RenderMainImGui();
 
-        // Close the window
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, true);
-
         glfwSwapBuffers(window);
-        // glfwPollEvents();
+        glfwPollEvents();
     }
 
     // Cleanup
@@ -224,7 +231,7 @@ void DrawContents(uint8_t *data)
 {
     glDrawPixels(WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, data);
 }
-W
+
 uint8_t *GenerateRandomData(uint32_t size)
 {
     uint8_t *data = new uint8_t[size];

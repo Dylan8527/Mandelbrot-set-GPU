@@ -19,9 +19,9 @@ public:
     uint8_t* get_data(){
         return data_host.data();
     }
-    std::vector<vec3> colormap(vec3 theta=vec3(.1f, .15f, .25f),int color_size=1<<8);
+    std::vector<vec3> colormap(vec3 theta=vec3(.85, .0, .15),int color_size=1<<8);
+    void update_colormap(vec3 theta);
 
-    __global__ void calpixel_kernel(float dx, float dy, float x_start, float y_start, int *x, int *y, );
 private:
     thrust::host_vector<uint8_t> data_host;
     thrust::device_vector<uint8_t> data_device;
