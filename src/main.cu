@@ -140,7 +140,7 @@ namespace MandelbrotSetGUI
 
             case (int)EAlgorithmMode::Escape:
                 set.update_colormap(theta);
-                set.compute(x_start, x_fin, y_start, y_fin);
+                set.escapetime_based_algorithm(x_start, x_fin, y_start, y_fin);
             break;
         }
 

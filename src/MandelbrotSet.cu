@@ -68,7 +68,7 @@ int MandelbrotSet::calpixel(std::complex<double> c)
 }
 
 #define TILE_WIDTH 32
-void MandelbrotSet::compute(double x_start, double x_finish, double y_start, double y_finish)
+void MandelbrotSet::escapetime_based_algorithm(double x_start, double x_finish, double y_start, double y_finish)
 {
     dim3 dimGrid(ceil((double)width / TILE_WIDTH), ceil((double)height / TILE_WIDTH), 1);
     dim3 dimBlock(TILE_WIDTH, TILE_WIDTH, 1);
