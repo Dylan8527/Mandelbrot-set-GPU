@@ -46,6 +46,13 @@ namespace MandelbrotSetGUI
     std::chrono::time_point<std::chrono::system_clock> start, end;
     std::chrono::duration<double> elapsed_seconds;
 
+    enum class EAlgorithmMode : int {
+        Basic,
+        Escape,
+    };
+    static constexpr const char* AlgorithmStr = "Basic\0Escape\0\0";
+    int algorithm_mode = 0;
+
     void update_scale()
     {
         x_start = (x_start-center_x)*scale+center_x;
@@ -125,8 +132,18 @@ namespace MandelbrotSetGUI
         DrawContents(data);
         delete[] data;*/
         start = std::chrono::system_clock::now();
-        set.update_colormap(theta);
-        set.compute(x_start, x_fin, y_start, y_fin);
+
+        switch(algorithm_mode){
+            case (int)EAlgorithmMode::Basic:
+                set.basic_algorithm(x_start, x_fin, y_start, y_fin);
+            break;
+
+            case (int)EAlgorithmMode::Escape:
+                set.update_colormap(theta);
+                set.compute(x_start, x_fin, y_start, y_fin);
+            break;
+        }
+
         end = std::chrono::system_clock::now();
         elapsed_seconds = end - start;
         // update_scale();
@@ -155,6 +172,8 @@ namespace MandelbrotSetGUI
             ImGui::ColorEdit3("Sin Colortable", (float *)&theta); // Edit 3 floats representing a color
 
             ImGui::Checkbox("Auto Scaling", &auto_scaling); // Edit bools storing our window open/close state
+
+            ImGui::Combo("Algorithm", (int *)&algorithm_mode, AlgorithmStr);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * elapsed_seconds.count(), 1./elapsed_seconds.count());
             ImGui::End();

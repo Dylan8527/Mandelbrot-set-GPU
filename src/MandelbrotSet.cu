@@ -1,13 +1,25 @@
 #include "MandelbrotSet.cuh"
 
 __global__ void computeKernel(uint8_t *data, int width, int height, double x_start, double x_finish, double y_start, double y_finish, vec3 *colortable_device);
-
+__global__ void white_and_black(uint8_t *data, 
+                                uint width,
+                                uint height, 
+                                double x_start, 
+                                double x_finish, 
+                                double y_start, 
+                                double y_finish,
+                                int maxiter);
 MandelbrotSet::MandelbrotSet(int w, int h) : width(w), height(h)
 {
     data_host.resize(width * height * 3);
     data_device = data_host;
     colortable_host = colormap();
     colortable_device = colortable_host;
+
+    ncycle=sqrt(ncycle);
+    light[0]=2*PI*light[0]/360.;
+    light[1]=PI/2.*light[1]/90.;
+
 }
 
 MandelbrotSet::~MandelbrotSet()
@@ -58,24 +70,6 @@ int MandelbrotSet::calpixel(std::complex<double> c)
 #define TILE_WIDTH 32
 void MandelbrotSet::compute(double x_start, double x_finish, double y_start, double y_finish)
 {
-
-    /*    float dx = (x_finish - x_start) / (width - 1);
-        float dy = (y_finish - y_start) / (height - 1);
-
-    #pragma omp parallel for
-        for (int x = 0; x < width; ++x)
-        {
-            for (int y = 0; y < height; ++y)
-            {
-                int offset = (width * y + x) * 3;
-
-                int iteration = calpixel(std::complex<float>(x * dx + x_start, y * dy + y_start));
-                vec3 color = colortable[iteration];
-                data[offset + 0] = uint8_t(color.x * 255);
-                data[offset + 1] = uint8_t(color.y * 255);
-                data[offset + 2] = uint8_t(color.z * 255);
-            }
-        }*/
     dim3 dimGrid(ceil((double)width / TILE_WIDTH), ceil((double)height / TILE_WIDTH), 1);
     dim3 dimBlock(TILE_WIDTH, TILE_WIDTH, 1);
     uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
@@ -84,10 +78,21 @@ void MandelbrotSet::compute(double x_start, double x_finish, double y_start, dou
     data_host = data_device;
 }
 
+void MandelbrotSet::basic_algorithm(double x_start, double x_finish, double y_start, double y_finish)
+{
+    uint S = width * height;
+    uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
+    white_and_black<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter);
+    data_host = data_device;
+}
+
 __global__ void computeKernel(uint8_t *data, int width, int height, double x_start, double x_finish, double y_start, double y_finish, vec3 *colortable_device)
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    static const double esc_radius = 2;
+
     if ((col < width) && (row < height))
     {
         double dx = (x_finish - x_start) / (width - 1);
@@ -95,22 +100,76 @@ __global__ void computeKernel(uint8_t *data, int width, int height, double x_sta
         int offset = (width * row + col) * 3;
         int count = 0;
         cuDoubleComplex c{col * dx + x_start, row * dy + y_start};
-        cuDoubleComplex z=c;
+        cuDoubleComplex z{0, 0};
         int max = 256;
         do
         {
             z = cuCadd(cuCmul(z, z), c);
             ++count;
-        }while ((cuCabs(z) <= 2.0) && (count < max));
+        }while ((cuCabs(z) <= esc_radius) && (count < max));
 
         int color_index = count == max ? max : count + 1 - log(log2(cuCabs(z)));
         vec3 color = colortable_device[color_index];
         data[offset + 0] = uint8_t(color.x*255);
         data[offset + 1] = uint8_t(color.y*255);
         data[offset + 2] = uint8_t(color.z*255);
-        /*data[offset + 0] = color_index;
-        data[offset + 1] = color_index;
-        data[offset + 2] = color_index;*/
     }
-    // return;
 }
+
+__global__ void compute_set_kernel(uint8_t *data, 
+                                uint width,
+                                uint height, 
+                                double x_start, 
+                                double x_finish, 
+                                double y_start, 
+                                double y_finish,
+                                vec3* colortable,
+                                int ncycle,
+                                double stripe_s,
+                                double stripe_sig,
+                                double step_s
+                                ) {
+    uint S = width * height;
+    cuda_foreach_uint(x, 0, S) {
+        uint row = x / width;
+        uint col = x % width;
+        double dx = (x_finish - x_start) / (width - 1);
+        double dy = (y_finish - y_start) / (height - 1);
+        cuDoubleComplex z{0, 0};
+        cuDoubleComplex c{col * dx + x_start, row * dy + y_start};
+
+    }
+}
+
+__global__ void white_and_black(uint8_t *data, 
+                                uint width,
+                                uint height, 
+                                double x_start, 
+                                double x_finish, 
+                                double y_start, 
+                                double y_finish,
+                                int maxiter){
+    uint S = width * height;
+    cuda_foreach_uint(x, 0, S) {
+        uint row = x / width;
+        uint col = x % width;
+        double dx = (x_finish - x_start) / (width - 1);
+        double dy = (y_finish - y_start) / (height - 1);
+        int offset = (width * row + col) * 3;
+        cuDoubleComplex z{0, 0};
+        cuDoubleComplex c{col * dx + x_start, row * dy + y_start};
+        data[offset] = 0;
+        data[offset + 1] = 0;
+        data[offset + 2] = 0;
+        for (int i = 0; i < maxiter; ++i) {
+            z = cuCadd(cuCmul(z, z), c);
+            if (cuCabs(z) > 2) {
+                data[offset] = 255;
+                data[offset + 1] = 255;
+                data[offset + 2] = 255;
+                break;
+            }
+        }
+    }
+}
+                            
