@@ -1,7 +1,8 @@
 #include "MandelbrotSet.cuh"
 
 __global__ void computeKernel(uint8_t *data, int width, int height, double x_start, double x_finish, double y_start, double y_finish, vec3 *colortable_device);
-__global__ void white_and_black(uint8_t *data, 
+/* 1. basic algorithm */
+__global__ void basic_kernel(uint8_t *data, 
                                 uint width,
                                 uint height, 
                                 double x_start, 
@@ -9,6 +10,38 @@ __global__ void white_and_black(uint8_t *data,
                                 double y_start, 
                                 double y_finish,
                                 int maxiter);
+
+/* 2. escape time based algorithm */
+__global__ void escapetime_kernel(uint8_t *data, 
+                                uint width,
+                                uint height, 
+                                double x_start, 
+                                double x_finish, 
+                                double y_start, 
+                                double y_finish,
+                                int maxiter,
+                                vec3* colortable,
+                                int ncycle,
+                                double stripe_s,
+                                double stripe_sig,
+                                double step_s,
+                                double phi,
+                                double theta,
+                                double opacity,
+                                double k_ambient,
+                                double k_diffuse,
+                                double k_specular,
+                                double shininess);
+
+__device__ void smooth_iter(cuDoubleComplex c, 
+                            int maxiter, 
+                            double stripe_s,
+                            double stripe_sig,
+                            double &niter,
+                            double &stripe_a,
+                            double &dem,
+                            cuDoubleComplex normal);
+
 MandelbrotSet::MandelbrotSet(int w, int h) : width(w), height(h)
 {
     data_host.resize(width * height * 3);
@@ -68,21 +101,13 @@ int MandelbrotSet::calpixel(std::complex<double> c)
 }
 
 #define TILE_WIDTH 32
-void MandelbrotSet::escapetime_based_algorithm(double x_start, double x_finish, double y_start, double y_finish)
+void MandelbrotSet::compute(double x_start, double x_finish, double y_start, double y_finish)
 {
     dim3 dimGrid(ceil((double)width / TILE_WIDTH), ceil((double)height / TILE_WIDTH), 1);
     dim3 dimBlock(TILE_WIDTH, TILE_WIDTH, 1);
     uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
     vec3 *colortableptr = thrust::raw_pointer_cast(&colortable_device[0]);
     computeKernel<<<dimGrid, dimBlock>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, colortableptr);
-    data_host = data_device;
-}
-
-void MandelbrotSet::basic_algorithm(double x_start, double x_finish, double y_start, double y_finish)
-{
-    uint S = width * height;
-    uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
-    white_and_black<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter);
     data_host = data_device;
 }
 
@@ -116,32 +141,23 @@ __global__ void computeKernel(uint8_t *data, int width, int height, double x_sta
     }
 }
 
-__global__ void compute_set_kernel(uint8_t *data, 
-                                uint width,
-                                uint height, 
-                                double x_start, 
-                                double x_finish, 
-                                double y_start, 
-                                double y_finish,
-                                vec3* colortable,
-                                int ncycle,
-                                double stripe_s,
-                                double stripe_sig,
-                                double step_s
-                                ) {
+void MandelbrotSet::basic_algorithm(double x_start, double x_finish, double y_start, double y_finish)
+{
     uint S = width * height;
-    cuda_foreach_uint(x, 0, S) {
-        uint row = x / width;
-        uint col = x % width;
-        double dx = (x_finish - x_start) / (width - 1);
-        double dy = (y_finish - y_start) / (height - 1);
-        cuDoubleComplex z{0, 0};
-        cuDoubleComplex c{col * dx + x_start, row * dy + y_start};
-
-    }
+    uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
+    basic_kernel<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter);
+    data_host = data_device;
 }
 
-__global__ void white_and_black(uint8_t *data, 
+void MandelbrotSet::escapetime_based_algorithm(double x_start, double x_finish, double y_start, double y_finish) {
+    uint S = width * height;
+    uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
+    vec3 *colortableptr = thrust::raw_pointer_cast(&colortable_device[0]);
+    escapetime_kernel<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter, colortableptr, ncycle, stripe_s, stripe_sig, step_s, light[0], light[1], light[2], light[3], light[4], light[5], light[6]);
+    data_host = data_device;
+}
+
+__global__ void basic_kernel(uint8_t *data, 
                                 uint width,
                                 uint height, 
                                 double x_start, 
@@ -172,4 +188,101 @@ __global__ void white_and_black(uint8_t *data,
         }
     }
 }
+
+__global__ void escapetime_kernel(uint8_t *data, 
+                                uint width,
+                                uint height, 
+                                double x_start, 
+                                double x_finish, 
+                                double y_start, 
+                                double y_finish,
+                                int maxiter,
+                                vec3* colortable,
+                                int ncycle,
+                                double stripe_s,
+                                double stripe_sig,
+                                double step_s,
+                                double phi,
+                                double theta,
+                                double opacity,
+                                double k_ambient,
+                                double k_diffuse,
+                                double k_specular,
+                                double shininess){
+    uint S = width * height;
+    cuda_foreach_uint(x, 0, S) {
+        uint row = x / width;
+        uint col = x % width;
+        double dx = (x_finish - x_start) / (width - 1);
+        double dy = (y_finish - y_start) / (height - 1);
+        int offset = (width * row + col) * 3;
+        cuDoubleComplex z{0, 0};
+        cuDoubleComplex c{col * dx + x_start, row * dy + y_start};
+
+        double niter, stripe_a, dem;
+        cuDoubleComplex normal;
+        smooth_iter(c, maxiter, stripe_s, stripe_sig, niter, stripe_a, dem, normal);
+        if(niter > 0) {
+            data[offset] = 0;
+            data[offset + 1] = 0;
+            data[offset + 2] = 0;
+        }
+        else{
+            data[offset] = 128;
+            data[offset + 1] = 0;
+            data[offset + 2] = 128;
+        }
+    }
+}
                             
+__device__ void smooth_iter(cuDoubleComplex c, 
+                            int maxiter, 
+                            double stripe_s,
+                            double stripe_sig,
+                            double &niter,
+                            double &stripe_a,
+                            double &dem,
+                            cuDoubleComplex normal) {
+    cuDoubleComplex z{0, 0};
+    cuDoubleComplex dz{1, 0};
+    cuDoubleComplex two{2, 2};
+    cuDoubleComplex one{1, 0};
+
+    double esc_radius = 1e5; 
+
+    bool is_stripe = (stripe_s > 0) & (stripe_sig > 0);
+    double stripe_t;
+    double modz;
+
+    int n = 0;
+    for(n = 0; n < maxiter; ++n) {
+        dz = cuCadd(cuCmul(two, cuCmul(z, dz)), one);
+        z = cuCadd(cuCmul(z, z), c);
+        if(is_stripe) {
+            stripe_t = sin(stripe_s*atan2(cuCimag(z), cuCreal(z)) + 1) / 2.;
+        }
+        modz = cuCabs(z);
+        if (modz > esc_radius) {
+            double log_ratio = log(modz) / log(esc_radius);
+            double smooth_i =  1 - log(log_ratio) / log(2.);
+            if(is_stripe) {
+                stripe_a = (stripe_a * (1 + smooth_i * (stripe_sig-1)) + stripe_t * smooth_i * (1 - stripe_sig));
+                stripe_a = stripe_a / (1 - pow(stripe_sig, n) * (1 + smooth_i * (stripe_sig-1)));
+            }
+            normal = cuCdiv(z, dz);
+            dem = modz * log(modz) / cuCabs(dz) / 2;
+            niter = n + smooth_i;
+            break;
+        }
+
+        if (is_stripe) {
+            stripe_a = stripe_a * stripe_sig + stripe_t * (1 - stripe_sig);
+        }
+    }
+    if(n == maxiter) {
+        niter = 0;
+        stripe_a = 0;
+        dem = 0;
+        normal = {0, 0};
+    }
+}

@@ -15,6 +15,7 @@ public:
     MandelbrotSet(int width,int height);
     ~MandelbrotSet();
     int calpixel(std::complex<double> c);
+    void compute(double x_start,double x_finish,double y_start,double y_finish);
     void escapetime_based_algorithm(double x_start,double x_finish,double y_start,double y_finish);
     void basic_algorithm(double x_start,double x_finish,double y_start,double y_finish);
     uint8_t* get_data(){
