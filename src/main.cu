@@ -30,20 +30,19 @@ uint8_t *GenerateRandomData(uint32_t size);
 namespace MandelbrotSetGUI
 {
     bool show_demo_window = false;                            // Show demo window
-    bool show_another_window = false;                        // Show another window
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f); // Background color
-
     MandelbrotSet set(WIDTH, HEIGHT);
 
     double center_x = -0.748766710846959;//-0.10109636384562;//-0.77568377; //-0.748766710846959//-1.6735 //-1.7497591451303665
-    double center_y =0.123640847970064;//0.95628651080914;//0.13646737; //0.123640847970064//0.0003318 //-0.0000000036851380
-    double x_start = -2.0;
-    double x_fin = 1.0;
-    double y_start = -1.0;
-    double y_fin = 1.0;
+    double center_y =  0.123640847970064;//0.95628651080914;//0.13646737; //0.123640847970064//0.0003318 //-0.0000000036851380
+    double x_start, x_fin, y_start, y_fin;
+
     double scale = 1.0;
+    bool auto_scaling = false;
     const double ratio = WIDTH / HEIGHT;
-    // timer for set.compute(x_start, x_fin, y_start, y_fin);
+
+    vec3 theta(.85, .0, .15);
+
+    // Timer
     std::chrono::time_point<std::chrono::system_clock> start, end;
     std::chrono::duration<double> elapsed_seconds;
 
@@ -57,6 +56,9 @@ namespace MandelbrotSetGUI
 
     void update()
     {
+        if (auto_scaling) {
+            scale = 0.99 * scale;
+        }
         x_start = center_x - 0.5 * ratio * scale;
         x_fin = center_x + 0.5 * ratio * scale;
         y_start = center_y -  0.5 * scale;
@@ -123,8 +125,10 @@ namespace MandelbrotSetGUI
         DrawContents(data);
         delete[] data;*/
         start = std::chrono::system_clock::now();
+        set.update_colormap(theta);
         set.compute(x_start, x_fin, y_start, y_fin);
         end = std::chrono::system_clock::now();
+        elapsed_seconds = end - start;
         // update_scale();
         update();
         DrawContents(set.get_data());
@@ -144,34 +148,15 @@ namespace MandelbrotSetGUI
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
-            static float f = 0.0f;
-            static int counter = 0;
+            ImGui::Begin("MandelbrotSet Console"); // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");          // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window); // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);             // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float *)&clear_color); // Edit 3 floats representing a color
+            ImGui::ColorEdit3("Sin Colortable", (float *)&theta); // Edit 3 floats representing a color
 
-            if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+            ImGui::Checkbox("Auto Scaling", &auto_scaling); // Edit bools storing our window open/close state
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }
-
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * elapsed_seconds.count(), 1./elapsed_seconds.count());
             ImGui::End();
         }
 
@@ -180,8 +165,6 @@ namespace MandelbrotSetGUI
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        // glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        // glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 }
