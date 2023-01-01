@@ -177,7 +177,7 @@ void MandelbrotSet::basic_algorithm(double x_start, double x_finish, double y_st
     uint S = width * height;
     uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
     basic_kernel<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter);
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     data_host = data_device;
 }
 
@@ -186,7 +186,7 @@ void MandelbrotSet::escapetime_based_algorithm(double x_start, double x_finish, 
     uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
     vec3 *colortableptr = thrust::raw_pointer_cast(&colortable_device[0]);
     escapetime_kernel<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter, colortableptr, ncycle, stripe_s, stripe_sig, step_s, light[0], light[1], light[2], light[3], light[4], light[5], light[6]);
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     data_host = data_device;
 }
 
@@ -282,6 +282,7 @@ __device__ void smooth_iter(cuDoubleComplex c,
     double esc_radius = 1e5; 
 
     bool is_stripe = (stripe_s > 0) && (stripe_sig > 0);
+    stripe_a = 0;
     double stripe_tt;
     double modz;
 
@@ -340,9 +341,6 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
     double brightness;
     blinn_phong_lighting(normal, phi, theta, opacity, k_ambient, k_diffuse, k_specular, shininess, brightness);
 
-    dem = -log(dem) / 12;
-    dem = 1 / (1 + exp(-10 * ((2*dem-1)/2)));
-
     int nshader = 0;
     double shader = 0;
 
@@ -367,7 +365,9 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
         double light;
         shader = shader / nshader;
         overlay(brightness, shader, 1, light);
-        // brightness = light * (1-dem) + dem * brightness;
+        dem = -log(dem) / 12;
+        dem = 1 / (1 + exp(-10 * ((2*dem-1)/2)));
+        brightness = light * (1-dem) + dem * brightness;
     }
     vec3& color = colortable[col_i];
     double r, g, b;
