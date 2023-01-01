@@ -24,6 +24,7 @@ public:
     }
     std::vector<vec3> colormap(vec3 theta=vec3(.85, .0, .15),int color_size=colortable_size);
     void update_colormap(vec3 theta);
+    void update_parameter(int new_maxiter, double new_ncycle, double new_stripe_s, double new_stripe_sig, double new_step_s);
 
 private:
     thrust::host_vector<uint8_t> data_host;

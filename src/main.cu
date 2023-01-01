@@ -41,6 +41,11 @@ namespace MandelbrotSetGUI
     const double ratio = WIDTH / HEIGHT;
 
     vec3 theta(.85, .0, .15);
+    int maxiter=500;
+    double ncycle=32;
+    double stripe_s=0;
+    double stripe_sig=0.9;
+    double step_s=0;
 
     // Timer
     std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -63,6 +68,7 @@ namespace MandelbrotSetGUI
 
     void update()
     {
+        set.update_parameter(maxiter, ncycle, stripe_s, stripe_sig, step_s);
         if (auto_scaling) {
             scale = 0.99 * scale;
         }
@@ -174,6 +180,15 @@ namespace MandelbrotSetGUI
             ImGui::Checkbox("Auto Scaling", &auto_scaling); // Edit bools storing our window open/close state
 
             ImGui::Combo("Algorithm", (int *)&algorithm_mode, AlgorithmStr);
+
+            if(ImGui::TreeNode("Rendering parameter")) 
+            {
+                ImGui::SliderInt("maxiter", (int *)&maxiter, 100, 2000);
+                ImGui::SliderFloat("ncycle", (float *)&ncycle, 0, 200);
+                ImGui::SliderFloat("stripe_s", (float *)&stripe_s, 0.0f, 32.0f);
+                ImGui::SliderFloat("stripe_sig", (float *)&stripe_sig, 0.0f, 1.0f);
+                ImGui::SliderInt("step_s", (int *)&step_s, 0, 100);
+            }
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * elapsed_seconds.count(), 1./elapsed_seconds.count());
             ImGui::End();

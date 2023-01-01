@@ -113,6 +113,14 @@ void MandelbrotSet::update_colormap(vec3 theta) {
     colortable_device = colortable_host;
 }
 
+void MandelbrotSet::update_parameter(int new_maxiter, double new_ncycle, double new_stripe_s, double new_stripe_sig, double new_step_s) {
+    maxiter = new_maxiter;
+    ncycle = sqrt(new_ncycle);
+    stripe_s = new_stripe_s;
+    stripe_sig = new_stripe_sig;
+    step_s = new_step_s;
+}
+
 int MandelbrotSet::calpixel(std::complex<double> c)
 {
     int count = 0;
@@ -335,8 +343,8 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
                                             double k_specular,
                                             double shininess) {
     int ncol = (colortable_size) - 1;
-    double iter = fmod(sqrt(niter), ncycle) / ncycle;
-    int col_i = round(iter * ncol);
+    niter = fmod(sqrt(niter), ncycle) / ncycle;
+    int col_i = round(niter * ncol);
 
     double brightness;
     blinn_phong_lighting(normal, phi, theta, opacity, k_ambient, k_diffuse, k_specular, shininess, brightness);
@@ -350,11 +358,11 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
     } 
     if(step_s > 0) {
         step_s = 1/step_s;
-        col_i = round((iter - fmod(iter, step_s))*ncol);
-        double x = fmod(iter, step_s) / step_s;
+        col_i = round((niter-fmod(niter, step_s))*ncol);
+        double x = fmod(niter, step_s) / step_s;
         double light_step = 6*(1-pow(x,5)-pow(1-x,100))/10;
         step_s = step_s/8;
-        x = fmod(iter, step_s) / step_s;
+        x = fmod(niter, step_s) / step_s;
         double light_step2 = 6*(1-pow(x,5)-(1-x,30))/10;
         double light_step_mixed;
         overlay(light_step2, light_step, 1, light_step_mixed);
