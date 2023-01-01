@@ -34,7 +34,7 @@ private:
     const int max_iterations=256;
 
     int maxiter=500;         /* maximal number of iteration */
-    int ncycle=32;           /* number of iteration before cycling the colortable */
+    double ncycle=32;           /* number of iteration before cycling the colortable */
     double stripe_s=0;       /* frequency parameter of stripe average coloring.(set 0 for no stripes) */
     double stripe_sig=.9;    /* memory parameter of stripe average coloring */
     double step_s=0;         /* frequency parameter of step coloring.(set 0 for no steps) */

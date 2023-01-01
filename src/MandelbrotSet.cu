@@ -21,7 +21,7 @@ __global__ void escapetime_kernel(uint8_t *data,
                                 double y_finish,
                                 int maxiter,
                                 vec3* colortable,
-                                int ncycle,
+                                double ncycle,
                                 double stripe_s,
                                 double stripe_sig,
                                 double step_s,
@@ -49,7 +49,7 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
                                             double dem,
                                             cuDoubleComplex normal,
                                             vec3* colortable,
-                                            int ncycle,
+                                            double ncycle,
                                             double phi,
                                             double theta,
                                             double opacity,
@@ -177,6 +177,7 @@ void MandelbrotSet::basic_algorithm(double x_start, double x_finish, double y_st
     uint S = width * height;
     uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
     basic_kernel<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter);
+    cudaDeviceSynchronize();
     data_host = data_device;
 }
 
@@ -230,7 +231,7 @@ __global__ void escapetime_kernel(uint8_t *data,
                                 double y_finish,
                                 int maxiter,
                                 vec3* colortable,
-                                int ncycle,
+                                double ncycle,
                                 double stripe_s,
                                 double stripe_sig,
                                 double step_s,
@@ -324,7 +325,7 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
                                             double dem,
                                             cuDoubleComplex normal,
                                             vec3* colortable,
-                                            int ncycle,
+                                            double ncycle,
                                             double phi,
                                             double theta,
                                             double opacity,
@@ -333,7 +334,7 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
                                             double k_specular,
                                             double shininess) {
     int ncol = (colortable_size) - 1;
-    double iter = (double)((int)sqrt(niter) % ncycle) / ncycle;
+    double iter = fmod(sqrt(niter), ncycle) / ncycle;
     int col_i = round(iter * ncol);
 
     double brightness;
@@ -351,11 +352,11 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
     } 
     if(step_s > 0) {
         step_s = 1/step_s;
-        col_i = round((iter - (int)iter % (int)step_s)*ncol);
-        double x = (int)iter % (int)step_s / step_s;
+        col_i = round((iter - fmod(iter, step_s))*ncol);
+        double x = fmod(iter, step_s) / step_s;
         double light_step = 6*(1-pow(x,5)-pow(1-x,100))/10;
         step_s = step_s/8;
-        x = (int)iter % (int)step_s / step_s;
+        x = fmod(iter, step_s) / step_s;
         double light_step2 = 6*(1-pow(x,5)-(1-x,30))/10;
         double light_step_mixed;
         overlay(light_step2, light_step, 1, light_step_mixed);
@@ -366,7 +367,7 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
         double light;
         shader = shader / nshader;
         overlay(brightness, shader, 1, light);
-        brightness = light * (1-dem) + dem * brightness;
+        // brightness = light * (1-dem) + dem * brightness;
     }
     vec3& color = colortable[col_i];
     double r, g, b;
