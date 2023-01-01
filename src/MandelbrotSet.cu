@@ -40,7 +40,38 @@ __device__ void smooth_iter(cuDoubleComplex c,
                             double &niter,
                             double &stripe_a,
                             double &dem,
-                            cuDoubleComplex normal);
+                            cuDoubleComplex &normal);
+
+__device__ __forceinline__ void color_pixel(uint8_t *data, 
+                                            double niter,
+                                            double stripe_a,
+                                            double step_s,
+                                            double dem,
+                                            cuDoubleComplex normal,
+                                            vec3* colortable,
+                                            int ncycle,
+                                            double phi,
+                                            double theta,
+                                            double opacity,
+                                            double k_ambient,
+                                            double k_diffuse,
+                                            double k_specular,
+                                            double shininess);
+
+__device__ __forceinline__ void overlay(double x, 
+                                        double y,
+                                        double gamma,
+                                        double &output); 
+
+__device__ __forceinline__ void blinn_phong_lighting(cuDoubleComplex normal, 
+                                                    double phi,
+                                                    double theta,
+                                                    double opacity,
+                                                    double k_ambient,
+                                                    double k_diffuse,
+                                                    double k_specular,
+                                                    double shininess,
+                                                    double &brightness);
 
 MandelbrotSet::MandelbrotSet(int w, int h) : width(w), height(h)
 {
@@ -223,14 +254,12 @@ __global__ void escapetime_kernel(uint8_t *data,
         cuDoubleComplex normal;
         smooth_iter(c, maxiter, stripe_s, stripe_sig, niter, stripe_a, dem, normal);
         if(niter > 0) {
+            color_pixel(data+offset, niter, stripe_a, step_s, dem, normal, colortable, ncycle, phi, theta, opacity, k_ambient, k_diffuse, k_specular, shininess);
+        }
+        else{
             data[offset] = 0;
             data[offset + 1] = 0;
             data[offset + 2] = 0;
-        }
-        else{
-            data[offset] = 128;
-            data[offset + 1] = 0;
-            data[offset + 2] = 128;
         }
     }
 }
@@ -242,7 +271,7 @@ __device__ void smooth_iter(cuDoubleComplex c,
                             double &niter,
                             double &stripe_a,
                             double &dem,
-                            cuDoubleComplex normal) {
+                            cuDoubleComplex &normal) {
     cuDoubleComplex z{0, 0};
     cuDoubleComplex dz{1, 0};
     cuDoubleComplex two{2, 2};
@@ -285,4 +314,103 @@ __device__ void smooth_iter(cuDoubleComplex c,
         dem = 0;
         normal = {0, 0};
     }
+}
+
+__device__ __forceinline__ void color_pixel(uint8_t *data, 
+                                            double niter,
+                                            double stripe_a,
+                                            double step_s,
+                                            double dem,
+                                            cuDoubleComplex normal,
+                                            vec3* colortable,
+                                            int ncycle,
+                                            double phi,
+                                            double theta,
+                                            double opacity,
+                                            double k_ambient,
+                                            double k_diffuse,
+                                            double k_specular,
+                                            double shininess) {
+    int ncol = (colortable_size) - 1;
+    double iter = (double)((int)sqrt(niter) % ncycle) / ncycle;
+    int col_i = round(iter * ncol);
+
+    double brightness;
+    blinn_phong_lighting(normal, phi, theta, opacity, k_ambient, k_diffuse, k_specular, shininess, brightness);
+
+    dem = -log(dem) / 12;
+    dem = 1 / (1 + exp(-10 * ((2*dem-1)/2)));
+
+    int nshader = 0;
+    double shader = 0;
+
+    if(stripe_a > 0) {
+        nshader += 1;
+        shader = shader + stripe_a;
+    } 
+    if(step_s > 0) {
+        step_s = 1/step_s;
+        col_i = round((iter - (int)iter % (int)step_s)*ncol);
+        double x = (int)iter % (int)step_s / step_s;
+        double light_step = 6*(1-pow(x,5)-pow(1-x,100))/10;
+        step_s = step_s/8;
+        x = (int)iter % (int)step_s / step_s;
+        double light_step2 = 6*(1-pow(x,5)-(1-x,30))/10;
+        double light_step_mixed;
+        overlay(light_step2, light_step, 1, light_step_mixed);
+        nshader += 1;
+        shader = shader + light_step_mixed;
+    }
+    if(nshader > 0){
+        double light;
+        overlay(brightness, shader/nshader, 1, light);
+        brightness = light * (1-dem) + dem * brightness;
+    }
+    vec3& color = colortable[col_i];
+    double r, g, b;
+    overlay(color.x, brightness, 1, r);
+    overlay(color.y, brightness, 1, g);
+    overlay(color.z, brightness, 1, b);
+    data[0] = uint8_t(r * 255);
+    data[1] = uint8_t(g * 255);
+    data[2] = uint8_t(b * 255);
+
+}
+
+__device__ __forceinline__ void overlay(double x, 
+                                        double y,
+                                        double gamma,
+                                        double &output) {
+    if(y < 0.5)
+        output = 2 * x * y;
+    else
+        output = 1 - 2 * (1 - x) * (1 - y);
+    output = output * gamma + x * (1 - gamma);
+
+}
+
+__device__ __forceinline__ void blinn_phong_lighting(cuDoubleComplex normal, 
+                                                    double phi,
+                                                    double theta,
+                                                    double opacity,
+                                                    double k_ambient,
+                                                    double k_diffuse,
+                                                    double k_specular,
+                                                    double shininess,
+                                                    double &brightness) {
+    cuDoubleComplex modn{cuCabs(normal), cuCabs(normal)};                                                    
+    normal = cuCdiv(normal, modn);
+    // Diffuse
+    double ldiff = cuCreal(normal)*cos(phi)*cos(theta) + cuCimag(normal)*sin(phi)*cos(theta) + sin(theta);
+    ldiff = ldiff / (1 + sin(theta));
+
+    // Specular
+    double theta_half = (PI/2. + theta) / 2.;
+    double lspec = cuCreal(normal)*cos(phi)*cos(theta_half) + cuCimag(normal)*sin(phi)*cos(theta_half) + sin(theta_half);
+    lspec = lspec / (1 + sin(theta_half));
+    lspec = pow(lspec, shininess);
+
+    brightness = k_ambient + k_diffuse * ldiff + k_specular * lspec;
+    brightness = brightness * opacity + (1 - opacity)/2.;
+
 }

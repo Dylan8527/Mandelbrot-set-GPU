@@ -8,6 +8,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
+#define colortable_size 1<<12
 
 class MandelbrotSet {
 public:
@@ -21,7 +22,7 @@ public:
     uint8_t* get_data(){
         return data_host.data();
     }
-    std::vector<vec3> colormap(vec3 theta=vec3(.85, .0, .15),int color_size=1<<12);
+    std::vector<vec3> colormap(vec3 theta=vec3(.85, .0, .15),int color_size=colortable_size);
     void update_colormap(vec3 theta);
 
 private:
