@@ -185,6 +185,7 @@ void MandelbrotSet::escapetime_based_algorithm(double x_start, double x_finish, 
     uint8_t *dataptr = thrust::raw_pointer_cast(&data_device[0]);
     vec3 *colortableptr = thrust::raw_pointer_cast(&colortable_device[0]);
     escapetime_kernel<<<ceil(S/512.), 512>>>(dataptr, width, height, x_start, x_finish, y_start, y_finish, maxiter, colortableptr, ncycle, stripe_s, stripe_sig, step_s, light[0], light[1], light[2], light[3], light[4], light[5], light[6]);
+    cudaDeviceSynchronize();
     data_host = data_device;
 }
 
@@ -279,8 +280,8 @@ __device__ void smooth_iter(cuDoubleComplex c,
 
     double esc_radius = 1e5; 
 
-    bool is_stripe = (stripe_s > 0) & (stripe_sig > 0);
-    double stripe_t;
+    bool is_stripe = (stripe_s > 0) && (stripe_sig > 0);
+    double stripe_tt;
     double modz;
 
     int n = 0;
@@ -288,14 +289,14 @@ __device__ void smooth_iter(cuDoubleComplex c,
         dz = cuCadd(cuCmul(two, cuCmul(z, dz)), one);
         z = cuCadd(cuCmul(z, z), c);
         if(is_stripe) {
-            stripe_t = sin(stripe_s*atan2(cuCimag(z), cuCreal(z)) + 1) / 2.;
+            stripe_tt = (sin(stripe_s*atan2(cuCimag(z), cuCreal(z)))+1) / 2.;
         }
         modz = cuCabs(z);
         if (modz > esc_radius) {
             double log_ratio = log(modz) / log(esc_radius);
             double smooth_i =  1 - log(log_ratio) / log(2.);
             if(is_stripe) {
-                stripe_a = (stripe_a * (1 + smooth_i * (stripe_sig-1)) + stripe_t * smooth_i * (1 - stripe_sig));
+                stripe_a = (stripe_a * (1 + smooth_i * (stripe_sig-1)) + stripe_tt * smooth_i * (1 - stripe_sig));
                 stripe_a = stripe_a / (1 - pow(stripe_sig, n) * (1 + smooth_i * (stripe_sig-1)));
             }
             normal = cuCdiv(z, dz);
@@ -305,7 +306,7 @@ __device__ void smooth_iter(cuDoubleComplex c,
         }
 
         if (is_stripe) {
-            stripe_a = stripe_a * stripe_sig + stripe_t * (1 - stripe_sig);
+            stripe_a = stripe_a * stripe_sig + stripe_tt * (1 - stripe_sig);
         }
     }
     if(n == maxiter) {
@@ -361,9 +362,10 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
         nshader += 1;
         shader = shader + light_step_mixed;
     }
-    if(nshader > 0){
+    if(nshader > 0) {
         double light;
-        overlay(brightness, shader/nshader, 1, light);
+        shader = shader / nshader;
+        overlay(brightness, shader, 1, light);
         brightness = light * (1-dem) + dem * brightness;
     }
     vec3& color = colortable[col_i];
