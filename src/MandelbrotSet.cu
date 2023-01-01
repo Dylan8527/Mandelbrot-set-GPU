@@ -371,6 +371,10 @@ __device__ __forceinline__ void color_pixel(uint8_t *data,
     overlay(color.x, brightness, 1, r);
     overlay(color.y, brightness, 1, g);
     overlay(color.z, brightness, 1, b);
+    r = fmaxf(0, fminf(1, r));
+    g = fmaxf(0, fminf(1, g));
+    b = fmaxf(0, fminf(1, b));
+
     data[0] = uint8_t(r * 255);
     data[1] = uint8_t(g * 255);
     data[2] = uint8_t(b * 255);
@@ -406,8 +410,8 @@ __device__ __forceinline__ void blinn_phong_lighting(cuDoubleComplex normal,
 
     // Specular
     double theta_half = (PI/2. + theta) / 2.;
-    double lspec = cuCreal(normal)*cos(phi)*cos(theta_half) + cuCimag(normal)*sin(phi)*cos(theta_half) + sin(theta_half);
-    lspec = lspec / (1 + sin(theta_half));
+    double lspec = cuCreal(normal)*cos(phi)*sin(theta_half) + cuCimag(normal)*sin(phi)*sin(theta_half) + cos(theta_half);
+    lspec = lspec / (1 + cos(theta_half));
     lspec = pow(lspec, shininess);
 
     brightness = k_ambient + k_diffuse * ldiff + k_specular * lspec;
