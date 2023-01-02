@@ -53,9 +53,10 @@ namespace MandelbrotSetGUI
 
     enum class EAlgorithmMode : int {
         Basic,
+        Serial,
         Escape,
     };
-    static constexpr const char* AlgorithmStr = "Basic\0Escape\0\0";
+    static constexpr const char* AlgorithmStr = "Basic\0Serial\0Escape\0\0";
     int algorithm_mode = 0;
 
     void update_scale()
@@ -70,7 +71,7 @@ namespace MandelbrotSetGUI
     {
         set.update_parameter(maxiter, ncycle, stripe_s, stripe_sig, step_s);
         if (auto_scaling) {
-            scale = 0.99 * scale;
+            scale = 0.98 * scale;
         }
         x_start = center_x - 0.5 * ratio * scale;
         x_fin = center_x + 0.5 * ratio * scale;
@@ -144,6 +145,10 @@ namespace MandelbrotSetGUI
                 set.basic_algorithm(x_start, x_fin, y_start, y_fin);
             break;
 
+            case (int)EAlgorithmMode::Serial:
+                set.serial_algorithm(x_start, x_fin, y_start, y_fin);
+            break;
+            
             case (int)EAlgorithmMode::Escape:
                 set.update_colormap(theta);
                 set.escapetime_based_algorithm(x_start, x_fin, y_start, y_fin);

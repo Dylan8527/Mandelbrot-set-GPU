@@ -180,6 +180,35 @@ __global__ void computeKernel(uint8_t *data, int width, int height, double x_sta
     }
 }
 
+void MandelbrotSet::serial_algorithm(double x_start,double x_finish,double y_start,double y_finish) 
+{
+    double dx = (x_finish - x_start) / (width - 1);
+    double dy = (y_finish - y_start) / (height - 1);
+    uint S = width * height;
+
+    #pragma omp parallel for shared(dx, dy) schedule(dynamic)
+    for(uint x = 0; x < S; ++x) {
+        int row = x / width;
+        int col = x % width;
+        int offset = (width * row + col) * 3;
+        std::complex<double> c(col * dx + x_start, row * dy + y_start);
+        std::complex<double> z(0, 0);
+        data_host[offset + 0] = 0;
+        data_host[offset + 1] = 0;
+        data_host[offset + 2] = 0;
+        for (int i = 0; i < maxiter; ++i) {
+            z = z * z + c;
+            if (std::norm(z) > 2.0) {
+                data_host[offset + 0] = 255;
+                data_host[offset + 1] = 255;
+                data_host[offset + 2] = 255;
+                break;
+            }
+        }
+    }
+
+}
+
 void MandelbrotSet::basic_algorithm(double x_start, double x_finish, double y_start, double y_finish)
 {
     uint S = width * height;
