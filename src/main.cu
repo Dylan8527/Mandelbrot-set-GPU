@@ -48,7 +48,8 @@ namespace MandelbrotSetGUI
     // Timer
     std::chrono::time_point<std::chrono::system_clock> start, end;
     std::chrono::duration<double> elapsed_seconds;
-
+    double average_time = 0.0;
+    double average_time_count = 0.0;
     enum class EAlgorithmMode : int {
         Basic,
         Serial,
@@ -207,7 +208,10 @@ namespace MandelbrotSetGUI
                 save_image = false;
             }
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * elapsed_seconds.count(), 1./elapsed_seconds.count());
+            average_time += elapsed_seconds.count();
+            average_time_count += 1.0;
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * average_time, 1./average_time);
             ImGui::End();
         }
 
