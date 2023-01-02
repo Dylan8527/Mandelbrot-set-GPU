@@ -189,7 +189,12 @@ namespace MandelbrotSetGUI
 
             if(ImGui::TreeNode("Rendering parameter")) 
             {
+                double old_maxiter = maxiter;
                 ImGui::SliderInt("maxiter", (int *)&maxiter, 100, 2000);
+                if (old_maxiter != maxiter) {
+                    average_time = 0;
+                    average_time_count = 0;
+                }
                 ImGui::SliderFloat("ncycle", (float *)&ncycle, 0, 200);
                 ImGui::SliderFloat("stripe_s", (float *)&stripe_s, 0.0f, 32.0f);
                 ImGui::SliderFloat("stripe_sig", (float *)&stripe_sig, 0.0f, 1.0f);
@@ -211,7 +216,7 @@ namespace MandelbrotSetGUI
             average_time += elapsed_seconds.count();
             average_time_count += 1.0;
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * average_time, 1./average_time);
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * average_time / average_time_count, 1./average_time * average_time_count);
             ImGui::End();
         }
 
