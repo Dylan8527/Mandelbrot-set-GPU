@@ -185,8 +185,13 @@ namespace MandelbrotSetGUI
 
             ImGui::Checkbox("Auto Scaling", &auto_scaling); // Edit bools storing our window open/close state
 
+            int old_algorithm = algorithm_mode;
             ImGui::Combo("Algorithm", (int *)&algorithm_mode, AlgorithmStr);
-
+            if (old_algorithm != algorithm_mode) {
+                average_time = 0;
+                average_time_count = 0;
+            }
+            
             if(ImGui::TreeNode("Rendering parameter")) 
             {
                 double old_maxiter = maxiter;
