@@ -72,7 +72,7 @@ namespace MandelbrotSetGUI
     {
         set.update_parameter(maxiter, ncycle, stripe_s, stripe_sig, step_s);
         if (auto_scaling) {
-            scale = 0.98 * scale;
+            scale = 0.95 * scale;
         }
         x_start = center_x - 0.5 * ratio * scale;
         x_fin = center_x + 0.5 * ratio * scale;
