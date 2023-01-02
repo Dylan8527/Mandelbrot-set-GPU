@@ -9,10 +9,8 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
-
-// void processInput(GLFWwindow *window);
-// void mouse_callback(GLFWwindow *window, double x, double y);
-// void scroll_callback(GLFWwindow *window, double x, double y);
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -58,6 +56,8 @@ namespace MandelbrotSetGUI
     };
     static constexpr const char* AlgorithmStr = "Basic\0Serial\0Escape\0\0";
     int algorithm_mode = 0;
+
+    bool save_image = false;
 
     void update_scale()
     {
@@ -148,7 +148,7 @@ namespace MandelbrotSetGUI
             case (int)EAlgorithmMode::Serial:
                 set.serial_algorithm(x_start, x_fin, y_start, y_fin);
             break;
-            
+
             case (int)EAlgorithmMode::Escape:
                 set.update_colormap(theta);
                 set.escapetime_based_algorithm(x_start, x_fin, y_start, y_fin);
@@ -193,6 +193,18 @@ namespace MandelbrotSetGUI
                 ImGui::SliderFloat("stripe_s", (float *)&stripe_s, 0.0f, 32.0f);
                 ImGui::SliderFloat("stripe_sig", (float *)&stripe_sig, 0.0f, 1.0f);
                 ImGui::SliderInt("step_s", (int *)&step_s, 0, 100);
+            }
+
+            // Save image button
+            if (ImGui::Button("Save Image"))
+            {
+                save_image = true;
+            }
+
+            if(save_image) {
+                std::string filename = "../MandelbrotSet.png";
+                stbi_write_png(filename.c_str(), WIDTH, HEIGHT, 3, set.get_data(), WIDTH * 3);
+                save_image = false;
             }
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f * elapsed_seconds.count(), 1./elapsed_seconds.count());
